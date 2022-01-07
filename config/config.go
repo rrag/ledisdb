@@ -30,12 +30,13 @@ const (
 )
 
 type LevelDBConfig struct {
-	Compression     bool `toml:"compression"`
-	BlockSize       int  `toml:"block_size"`
-	WriteBufferSize int  `toml:"write_buffer_size"`
-	CacheSize       int  `toml:"cache_size"`
-	MaxOpenFiles    int  `toml:"max_open_files"`
-	MaxFileSize     int  `toml:"max_file_size"`
+	Compression                   bool    `toml:"compression"`
+	BlockSize                     int     `toml:"block_size"`
+	WriteBufferSize               int     `toml:"write_buffer_size"`
+	CacheSize                     int     `toml:"cache_size"`
+	MaxOpenFiles                  int     `toml:"max_open_files"`
+	MaxFileSize                   int     `toml:"max_file_size"`
+	CompactionTableSizeMultiplier float64 `toml:"compaction_table_size_multiplier"`
 }
 
 type RocksDBConfig struct {
@@ -248,6 +249,7 @@ func (cfg *LevelDBConfig) adjust() {
 	cfg.WriteBufferSize = getDefault(4*MB, cfg.WriteBufferSize)
 	cfg.MaxOpenFiles = getDefault(1024, cfg.MaxOpenFiles)
 	cfg.MaxFileSize = getDefault(32*MB, cfg.MaxFileSize)
+	cfg.CompactionTableSizeMultiplier = 1
 }
 
 func (cfg *RocksDBConfig) adjust() {

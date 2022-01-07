@@ -129,7 +129,9 @@ func newOptions(cfg *config.LevelDBConfig) *opt.Options {
 	opts.OpenFilesCacheCapacity = cfg.MaxOpenFiles
 
 	//here we use default value, later add config support
-	opts.CompactionTableSize = 32 * 1024 * 1024
+	// opts.CompactionTableSize = 32 * 1024 * 1024
+	opts.CompactionTableSize = cfg.MaxFileSize
+	opts.CompactionTableSizeMultiplier = cfg.CompactionTableSizeMultiplier
 	opts.WriteL0SlowdownTrigger = 16
 	opts.WriteL0PauseTrigger = 64
 
