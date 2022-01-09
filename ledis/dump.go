@@ -7,9 +7,10 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"runtime"
 
+	"github.com/golang/snappy"
 	"github.com/ledisdb/ledisdb/store"
-	"github.com/siddontang/go/snappy"
 )
 
 // DumpHead is the head of a dump.
@@ -82,9 +83,7 @@ func (l *Ledis) Dump(w io.Writer) error {
 		key = it.RawKey()
 		value = it.RawValue()
 
-		if key, err = snappy.Encode(compressBuf, key); err != nil {
-			return err
-		}
+		key = snappy.Encode(compressBuf, key)
 
 		if err = binary.Write(wb, binary.BigEndian, uint16(len(key))); err != nil {
 			return err
@@ -94,9 +93,7 @@ func (l *Ledis) Dump(w io.Writer) error {
 			return err
 		}
 
-		if value, err = snappy.Encode(compressBuf, value); err != nil {
-			return err
-		}
+		value = snappy.Encode(compressBuf, value)
 
 		if err = binary.Write(wb, binary.BigEndian, uint32(len(value))); err != nil {
 			return err
@@ -142,20 +139,22 @@ func (l *Ledis) LoadDump(r io.Reader) (*DumpHead, error) {
 	var keyLen uint16
 	var valueLen uint32
 
-	var keyBuf bytes.Buffer
-	var valueBuf bytes.Buffer
-
 	deKeyBuf := make([]byte, 4096)
 	deValueBuf := make([]byte, 4096)
 
 	var key, value []byte
 
-	wb := l.ldb.NewWriteBatch()
-	defer wb.Close()
+	var wb *store.WriteBatch
 
 	n := 0
 
+	var keyBuf bytes.Buffer
+	var valueBuf bytes.Buffer
+
 	for {
+		if wb == nil {
+			wb = l.ldb.NewWriteBatch()
+		}
 		if err = binary.Read(rb, binary.BigEndian, &keyLen); err != nil && err != io.EOF {
 			return nil, err
 		} else if err == io.EOF {
@@ -182,13 +181,19 @@ func (l *Ledis) LoadDump(r io.Reader) (*DumpHead, error) {
 			return nil, err
 		}
 
-		wb.Put(key, value)
 		n++
-		if n%1024 == 0 {
+		wb.Put(key, value)
+
+		count := 1024 * 4
+		if n%count == 0 {
 			fmt.Println("n = ", n)
+
 			if err = wb.Commit(); err != nil {
 				return nil, err
 			}
+			wb.Close()
+			wb = nil
+			runtime.GC()
 		}
 
 		// if err = l.ldb.Put(key, value); err != nil {
@@ -199,13 +204,16 @@ func (l *Ledis) LoadDump(r io.Reader) (*DumpHead, error) {
 		valueBuf.Reset()
 	}
 
-	if err = wb.Commit(); err != nil {
-		return nil, err
-	}
-
-	if l.r != nil {
-		if err := l.r.UpdateCommitID(h.CommitID); err != nil {
+	if wb != nil {
+		if err = wb.Commit(); err != nil {
 			return nil, err
+		}
+		wb.Close()
+
+		if l.r != nil {
+			if err := l.r.UpdateCommitID(h.CommitID); err != nil {
+				return nil, err
+			}
 		}
 	}
 
