@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"encoding/binary"
+	"fmt"
 	"io"
 	"os"
 
@@ -184,6 +185,7 @@ func (l *Ledis) LoadDump(r io.Reader) (*DumpHead, error) {
 		wb.Put(key, value)
 		n++
 		if n%1024 == 0 {
+			fmt.Println("n = ", n)
 			if err = wb.Commit(); err != nil {
 				return nil, err
 			}
