@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strings"
 
 	"github.com/ledisdb/ledisdb/store"
 	"github.com/siddontang/go/snappy"
@@ -121,6 +122,32 @@ func (l *Ledis) LoadDumpFile(path string) (*DumpHead, error) {
 	return l.LoadDump(f)
 }
 
+func saveToDisk(
+	intraDayKV map[string]map[string]string,
+	eodKV map[string][]string,
+) {
+	{
+		ks := make(map[string][]string)
+		for k, ds := range intraDayKV {
+			dates := []string{}
+			for d := range ds {
+				dates = append(dates, d)
+			}
+
+			ks[k] = dates
+		}
+		fmt.Println("Intra day", ks)
+	}
+	{
+		ks := []string{}
+		for k, _ := range eodKV {
+
+			ks = append(ks, k)
+		}
+		fmt.Println("Intra day", ks)
+	}
+}
+
 // LoadDump clears all data and loads dump file to db
 func (l *Ledis) LoadDump(r io.Reader) (*DumpHead, error) {
 	l.wLock.Lock()
@@ -155,6 +182,8 @@ func (l *Ledis) LoadDump(r io.Reader) (*DumpHead, error) {
 
 	n := 0
 
+	intraDayKV := make(map[string]map[string]string)
+	eodKV := make(map[string][]string)
 	for {
 		if err = binary.Read(rb, binary.BigEndian, &keyLen); err != nil && err != io.EOF {
 			return nil, err
@@ -182,13 +211,34 @@ func (l *Ledis) LoadDump(r io.Reader) (*DumpHead, error) {
 			return nil, err
 		}
 
-		wb.Put(key, value)
+		// wb.Put(key, value)
+		ks := string(key)
+		vs := string(value)
+		if strings.Contains(ks, "1m") || strings.Contains(ks, "1h") {
+			//intraDayKV[]
+			parts := strings.Split(ks, ":")
+			if _, found := intraDayKV[parts[0]]; !found {
+				intraDayKV[parts[0]] = make(map[string]string)
+			}
+			intraDayKV[parts[0]][parts[1]] = vs
+			n++
+		} else if strings.Contains(ks, "1D") {
+			idx := strings.LastIndexAny(ks, "1D")
+			key := ks[:idx]
+			eodKV[key] = append(eodKV[key], vs)
+			n++
+		}
 		n++
 		if n%1024 == 0 {
 			fmt.Println("n = ", n)
-			if err = wb.Commit(); err != nil {
+
+			saveToDisk(intraDayKV, eodKV)
+			intraDayKV = make(map[string]map[string]string)
+			eodKV = make(map[string][]string)
+
+			/* if err = wb.Commit(); err != nil {
 				return nil, err
-			}
+			} */
 		}
 
 		// if err = l.ldb.Put(key, value); err != nil {
@@ -199,7 +249,9 @@ func (l *Ledis) LoadDump(r io.Reader) (*DumpHead, error) {
 		valueBuf.Reset()
 	}
 
-	if err = wb.Commit(); err != nil {
+	saveToDisk(intraDayKV, eodKV)
+
+	/* if err = wb.Commit(); err != nil {
 		return nil, err
 	}
 
@@ -207,7 +259,7 @@ func (l *Ledis) LoadDump(r io.Reader) (*DumpHead, error) {
 		if err := l.r.UpdateCommitID(h.CommitID); err != nil {
 			return nil, err
 		}
-	}
+	} */
 
 	return h, nil
 }
