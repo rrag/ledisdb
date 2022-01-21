@@ -2,14 +2,15 @@ package rpl
 
 import (
 	"encoding/binary"
+	"io"
 	"os"
 	"path"
 	"sync"
 	"time"
 
+	"github.com/golang/snappy"
 	"github.com/ledisdb/ledisdb/config"
 	"github.com/siddontang/go/log"
-	"github.com/siddontang/go/snappy"
 )
 
 type Stat struct {
@@ -111,11 +112,7 @@ func (r *Replication) Close() error {
 
 func (r *Replication) Log(data []byte) (*Log, error) {
 	if r.cfg.Replication.Compression {
-		//todo optimize
-		var err error
-		if data, err = snappy.Encode(nil, data); err != nil {
-			return nil, err
-		}
+		data = snappy.Encode(nil, data)
 	}
 
 	r.m.Lock()
@@ -227,7 +224,7 @@ func (r *Replication) Stat() (*Stat, error) {
 
 func (r *Replication) updateCommitID(id uint64, force bool) error {
 	if force {
-		if _, err := r.commitLog.Seek(0, os.SEEK_SET); err != nil {
+		if _, err := r.commitLog.Seek(0, io.SeekStart); err != nil {
 			return err
 		}
 

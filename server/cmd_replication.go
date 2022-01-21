@@ -10,6 +10,7 @@ import (
 
 	"github.com/ledisdb/ledisdb/ledis"
 	"github.com/siddontang/go/hack"
+	"github.com/siddontang/go/log"
 	"github.com/siddontang/go/num"
 )
 
@@ -176,6 +177,7 @@ func replconfCommand(c *client) error {
 			}
 			c.slaveListeningAddr = net.JoinHostPort(host, hack.String(args[i+1]))
 
+			log.Infof("adding slave %s", c.slaveListeningAddr)
 			c.app.addSlave(c)
 		default:
 			return ErrSyntax

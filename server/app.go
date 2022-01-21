@@ -2,6 +2,7 @@ package server
 
 import (
 	"fmt"
+	"log"
 	"net"
 	"net/http"
 	"os"
@@ -230,7 +231,9 @@ func (app *App) Close() {
 
 func (app *App) Run() {
 	if len(app.cfg.SlaveOf) > 0 {
-		app.slaveof(app.cfg.SlaveOf, false, app.cfg.Readonly)
+		if err := app.slaveof(app.cfg.SlaveOf, false, app.cfg.Readonly); err != nil {
+			log.Fatalf("Unable to be slave of %s => %v", app.cfg.SlaveOf, err)
+		}
 	}
 
 	go app.httpServe()

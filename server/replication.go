@@ -228,6 +228,7 @@ func (m *master) runReplication(restart bool) {
 			}
 			m.state.Set(replConnectedState)
 		}
+		log.Infof("starting sync with master %s", m.addr)
 
 		for {
 			if err := m.sync(); err != nil {
@@ -253,6 +254,8 @@ func (m *master) replConf() error {
 		return err
 	} else if strings.ToUpper(s) != "OK" {
 		return fmt.Errorf("not ok but %s", s)
+	} else {
+		log.Infof("replConf received %s", s)
 	}
 
 	return nil
@@ -313,6 +316,8 @@ func (m *master) sync() error {
 		return err
 	}
 
+	// log.Infof("Recieved for syncID = %d", syncID)
+
 	m.state.Set(replConnectedState)
 
 	m.syncBuf.Reset()
@@ -329,7 +334,7 @@ func (m *master) sync() error {
 	buf := m.syncBuf.Bytes()
 
 	if len(buf) < 8 {
-		return fmt.Errorf("inavlid sync size %d", len(buf))
+		return fmt.Errorf("invalid sync size %d", len(buf))
 	}
 
 	m.app.info.Replication.MasterLastLogID.Set(num.BytesToUint64(buf))
@@ -342,6 +347,7 @@ func (m *master) sync() error {
 	if len(buf) == 0 {
 		return nil
 	}
+	log.Infof("Recieved data for commitID = %d", syncID)
 
 	if err = m.app.ldb.StoreLogsFromData(buf); err != nil {
 		return err

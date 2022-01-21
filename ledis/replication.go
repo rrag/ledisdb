@@ -6,10 +6,10 @@ import (
 	"io"
 	"time"
 
+	"github.com/golang/snappy"
 	"github.com/ledisdb/ledisdb/rpl"
 	"github.com/ledisdb/ledisdb/store"
 	"github.com/siddontang/go/log"
-	"github.com/siddontang/go/snappy"
 )
 
 const (
@@ -231,6 +231,7 @@ func (l *Ledis) ReadLogsToTimeout(startLogID uint64, w io.Writer, timeout int, q
 
 func (l *Ledis) propagate(rl *rpl.Log) {
 	for _, h := range l.rhs {
+		log.Infof("Propagating commit ID %d", rl.ID)
 		h(rl)
 	}
 }
