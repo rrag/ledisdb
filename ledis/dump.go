@@ -186,7 +186,7 @@ func (l *Ledis) LoadDump(r io.Reader) (*DumpHead, error) {
 
 		count := 1024 * 4
 		if n%count == 0 {
-			fmt.Println("n = ", n)
+			fmt.Println("n =", n)
 
 			if err = wb.Commit(); err != nil {
 				return nil, err
@@ -205,6 +205,8 @@ func (l *Ledis) LoadDump(r io.Reader) (*DumpHead, error) {
 	}
 
 	if wb != nil {
+		fmt.Println("final write n =", n)
+
 		if err = wb.Commit(); err != nil {
 			return nil, err
 		}
@@ -216,6 +218,8 @@ func (l *Ledis) LoadDump(r io.Reader) (*DumpHead, error) {
 			}
 		}
 	}
+
+	l.CompactStore()
 
 	return h, nil
 }
