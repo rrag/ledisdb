@@ -130,6 +130,10 @@ func newOptions(cfg *config.LevelDBConfig) *opt.Options {
 
 	opts.CompactionTableSize = cfg.MaxFileSize
 	opts.CompactionTableSizeMultiplier = float64(cfg.CompactionTableSizeMultiplier)
+
+	opts.CompactionTotalSize = cfg.MaxFileSize * 2
+	opts.CompactionTotalSizeMultiplier = 2
+
 	opts.WriteL0SlowdownTrigger = 16
 	opts.WriteL0PauseTrigger = 64
 
