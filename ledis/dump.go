@@ -219,7 +219,5 @@ func (l *Ledis) LoadDump(r io.Reader) (*DumpHead, error) {
 		}
 	}
 
-	l.CompactStore()
-
 	return h, nil
 }

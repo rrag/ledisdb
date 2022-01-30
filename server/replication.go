@@ -232,7 +232,7 @@ func (m *master) runReplication(restart bool) {
 
 		for {
 			if err := m.sync(); err != nil {
-				log.Errorf("sync error %s", err.Error())
+				log.Errorf("sync error %s from master %s", err.Error(), m.addr)
 				break
 			}
 			m.state.Set(replConnectedState)
@@ -253,9 +253,9 @@ func (m *master) replConf() error {
 	if s, err := goredis.String(m.conn.Do("replconf", "listening-port", port)); err != nil {
 		return err
 	} else if strings.ToUpper(s) != "OK" {
-		return fmt.Errorf("not ok but %s", s)
+		return fmt.Errorf("not ok but %s from %s", s, m.addr)
 	} else {
-		log.Infof("replConf received %s", s)
+		log.Infof("replConf received %s from %s", s, m.addr)
 	}
 
 	return nil
@@ -281,12 +281,12 @@ func (m *master) fullSync() error {
 	err = m.conn.ReceiveBulkTo(f)
 	f.Close()
 	if err != nil {
-		log.Errorf("read dump data error %s", err.Error())
+		log.Errorf("read dump data error %s from %s", err.Error(), m.addr)
 		return err
 	}
 
 	if _, err = m.app.ldb.LoadDumpFile(dumpPath); err != nil {
-		log.Errorf("load dump file error %s", err.Error())
+		log.Errorf("load dump file error %s from %s", err.Error(), m.addr)
 		return err
 	}
 
@@ -334,7 +334,7 @@ func (m *master) sync() error {
 	buf := m.syncBuf.Bytes()
 
 	if len(buf) < 8 {
-		return fmt.Errorf("invalid sync size %d", len(buf))
+		return fmt.Errorf("invalid sync size %d from %s", len(buf), m.addr)
 	}
 
 	m.app.info.Replication.MasterLastLogID.Set(num.BytesToUint64(buf))
@@ -347,7 +347,7 @@ func (m *master) sync() error {
 	if len(buf) == 0 {
 		return nil
 	}
-	log.Infof("Recieved data for commitID = %d", syncID)
+	log.Infof("Recieved data for commitID = %d from %s", syncID, m.addr)
 
 	if err = m.app.ldb.StoreLogsFromData(buf); err != nil {
 		return err
@@ -464,6 +464,7 @@ func (app *App) publishNewLog(l *rpl.Log) {
 	n := 0
 	logID := l.ID
 	for _, s := range app.slaves {
+
 		lastLogID := s.lastLogID.Get()
 		if lastLogID == logID {
 			//slave has already owned this log

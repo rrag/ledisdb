@@ -231,7 +231,7 @@ func (l *Ledis) ReadLogsToTimeout(startLogID uint64, w io.Writer, timeout int, q
 
 func (l *Ledis) propagate(rl *rpl.Log) {
 	for _, h := range l.rhs {
-		log.Infof("Propagating commit ID %d", rl.ID)
+		log.Infof("Propagating commit ID %d for %s", rl.ID, l.cfg.Addr)
 		h(rl)
 	}
 }

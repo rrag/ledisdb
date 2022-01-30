@@ -75,7 +75,11 @@ func NewReplication(cfg *config.Config) (*Replication, error) {
 		return nil, err
 	}
 
-	log.Infof("staring replication with commit ID %d", r.commitID)
+	if cfg.SlaveOf == "" {
+		log.Infof("staring replication as master with commit ID %d for %s", r.commitID, cfg.Addr)
+	} else {
+		log.Infof("staring replication as slave with commit ID %d for %s", r.commitID, cfg.Addr)
+	}
 
 	r.wg.Add(1)
 	go r.run()
