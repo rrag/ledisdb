@@ -16,6 +16,18 @@ func pingCommand(c *client) error {
 	return nil
 }
 
+// add hello command since "github.com/go-redis/redis/v9"
+// does not work without it
+func helloCommand(c *client) error {
+	c.resp.writeArray([]interface{}{
+		"server",
+		"ledis",
+		"version",
+		"1.0.5",
+	})
+	return nil
+}
+
 func defaultAuth(c *config.Config, password string) bool {
 	return c.AuthPassword == password
 }
@@ -179,6 +191,7 @@ func configCommand(c *client) error {
 }
 
 func init() {
+	register("hello", helloCommand)
 	register("auth", authCommand)
 	register("ping", pingCommand)
 	register("echo", echoCommand)
